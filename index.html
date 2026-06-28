@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mihir Sharma</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      background: #f4eee0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    canvas {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      touch-action: none;
+    }
+    .links {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(700px, calc(100vw - 40px));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: 'EB Garamond', Garamond, Georgia, serif;
+      font-size: 14px;
+      color: #2a1a0a;
+      z-index: 10;
+      pointer-events: none;
+      padding: 0 45px;
+    }
+    .links a {
+      color: #2a1a0a;
+      text-decoration: none;
+      pointer-events: auto;
+      opacity: 0.6;
+      letter-spacing: 0.02em;
+      transition: opacity 0.15s;
+    }
+    .links a:hover {
+      opacity: 1;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+  </style>
+  <script type="module" src="/src/main.js"></script>
+</head>
+<body>
+  <canvas id="manuscript"></canvas>
+  <nav class="links">
+    <a href="mailto:mihirxsharma15@gmail.com">mihirxsharma15@gmail.com</a>
+    <a href="https://www.linkedin.com/in/MihirSharma15" target="_blank" rel="noopener">LinkedIn</a>
+    <a href="https://x.com/mihirsharma2005" target="_blank" rel="noopener">X</a>
+  </nav>
+</body>
+</html>
