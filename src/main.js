@@ -296,7 +296,7 @@ function render(time) {
   let idle = !mouseDown;
   let sc = getPageScale();
   let restX = offset.x + layout.margin + 80 * sc;
-  let restY = offset.y + layout.margin + 40 * sc;
+  let restY = offset.y + layout.margin + (-20) * sc;
 
   let moved = updateDragon(dragon, time, mouse.x, mouse.y, idle, restX, restY);
   if (mouseDown) spawnFire(dragon);
