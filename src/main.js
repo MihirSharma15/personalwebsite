@@ -126,7 +126,7 @@ await document.fonts.ready;
 let scale = getPageScale();
 let offset = getPageOffset(layout);
 let dragonStartX = offset.x + layout.margin + 80 * scale;
-let dragonStartY = offset.y + layout.margin - 60 * scale;
+let dragonStartY = offset.y + layout.margin + 40 * scale;
 
 let dragon = createDragon(dragonStartX, dragonStartY, scale);
 
@@ -190,7 +190,7 @@ function layoutText(offsetX, offsetY) {
   let ascent = layout.fontSize * 0.857;
   let baselineOffset = (layout.lineHeight - ascent) / 2;
   let maxY = layout.pageHeight - layout.margin - LINKS_BOTTOM_RESERVE;
-  let y = layout.margin;
+  let y = layout.margin + layout.lineHeight;
 
   for (let pi = 0; pi < preparedParagraphs.length; pi++) {
     let prepared = preparedParagraphs[pi];
@@ -296,7 +296,7 @@ function render(time) {
   let idle = !mouseDown;
   let sc = getPageScale();
   let restX = offset.x + layout.margin + 80 * sc;
-  let restY = offset.y + layout.margin - 60 * sc;
+  let restY = offset.y + layout.margin + 40 * sc;
 
   let moved = updateDragon(dragon, time, mouse.x, mouse.y, idle, restX, restY);
   if (mouseDown) spawnFire(dragon);
