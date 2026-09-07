@@ -18,7 +18,7 @@ export const SECTIONS = [
     label: 'Blog',
     title: 'Blog',
     paragraphs: [
-      `TBD`
+      `TBD — incoming.`
     ]
   },
   {
