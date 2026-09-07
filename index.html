@@ -52,10 +52,14 @@
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
     }
-    .links a:hover {
-      opacity: 1;
-      text-decoration: underline;
-      text-underline-offset: 3px;
+    /* Guarded on (hover: hover): a tap fires mouseenter with no matching
+       mouseleave, so on touch the hover styling would stick after navigating. */
+    @media (hover: hover) {
+      .links a:hover {
+        opacity: 1;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
     }
     @media (max-width: 600px) {
       .links {
@@ -96,18 +100,108 @@
       letter-spacing: 0.02em;
       transition: opacity 0.15s, color 0.15s;
     }
-    .section-nav a:hover {
-      opacity: 1;
-      color: #c4402a;
-      text-decoration: underline;
-      text-underline-offset: 3px;
+    @media (hover: hover) {
+      .section-nav a:hover {
+        opacity: 1;
+        color: #c4402a;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+    }
+    .nav-toggle,
+    .nav-scrim { display: none; }
+
+    /* On narrow screens the dragon coils through the top-left of the page and
+       collides with the inline nav, so the links move into a drawer behind a
+       hamburger pinned to the opposite corner. */
+    @media (max-width: 600px) {
+      .nav-toggle {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        z-index: 40;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        padding: 0;
+        border: none;
+        border-radius: 10px;
+        background: rgba(244, 238, 224, 0.6);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .nav-toggle span {
+        display: block;
+        width: 18px;
+        height: 1.5px;
+        background: #2a1a0a;
+        opacity: 0.75;
+        transition: transform 0.25s ease, opacity 0.2s ease;
+      }
+      body.nav-open .nav-toggle span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+      body.nav-open .nav-toggle span:nth-child(2) { opacity: 0; }
+      body.nav-open .nav-toggle span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+      .nav-scrim {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        background: rgba(42, 26, 10, 0.18);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+      }
+      body.nav-open .nav-scrim {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .section-nav {
+        top: 0;
+        left: auto;
+        right: 0;
+        width: min(260px, 78vw);
+        height: 100%;
+        padding: 0;
+        z-index: 30;
+        background: #f4eee0;
+        border-left: 1px solid rgba(42, 26, 10, 0.12);
+        box-shadow: -8px 0 24px rgba(42, 26, 10, 0.1);
+        transform: translateX(100%);
+        transition: transform 0.28s ease;
+      }
+      body.nav-open .section-nav { transform: translateX(0); }
+      .section-nav .nav-links {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+        width: 100%;
+        padding: 78px 26px 0;
+      }
+      .section-nav a {
+        width: 100%;
+        padding: 11px 0;
+        font-size: 17px;
+        opacity: 0.75;
+      }
     }
   </style>
   <script type="module" src="/src/main.js"></script>
 </head>
 <body>
   <canvas id="manuscript"></canvas>
-  <nav class="section-nav">
+  <button class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="section-nav">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="nav-scrim"></div>
+  <nav class="section-nav" id="section-nav">
     <div class="nav-links">
       <a href="/" data-route="home">Home</a>
       <a href="/travel" data-route="travel">Travel</a>

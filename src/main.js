@@ -17,7 +17,10 @@ import { loadFooterArt, drawFooterArt } from './footerArt.js';
 
 // ---- WebGL setup ----
 let canvas = document.getElementById('manuscript');
-let gl = canvas.getContext('webgl2', { alpha: false, antialias: false });
+// alpha:false would make the drawing buffer start as opaque black, which the
+// fixed-position canvas shows over the page background until the first frame
+// lands — and the first frame waits on sprites and fonts below.
+let gl = canvas.getContext('webgl2', { alpha: true, antialias: false });
 let offscreen = document.createElement('canvas');
 let ctx = offscreen.getContext('2d');
 
@@ -156,11 +159,30 @@ function handleSectionChange(section) {
 }
 initRouter(handleSectionChange);
 
+// ---- Mobile nav drawer ----
+let navToggle = document.querySelector('.nav-toggle');
+let navScrim = document.querySelector('.nav-scrim');
+
+function setNavOpen(open) {
+  document.body.classList.toggle('nav-open', open);
+  navToggle.setAttribute('aria-expanded', String(open));
+  navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+}
+
+navToggle.addEventListener('click', () => {
+  setNavOpen(!document.body.classList.contains('nav-open'));
+});
+navScrim.addEventListener('click', () => setNavOpen(false));
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') setNavOpen(false);
+});
+
 document.querySelectorAll('.section-nav a[data-route]').forEach(a => {
   const id = a.dataset.route;
   a.addEventListener('click', e => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
     e.preventDefault();
+    setNavOpen(false);
     let section = navigate(id);
     if (section) changeSection(section);
   });
@@ -177,15 +199,19 @@ let navHoverTimer = null;
 const NAV_FIRE_SPAWN_INTERVAL = 200;
 const NAV_FIRE_HOVER_DELAY = 1000;
 
+// A tap makes touch browsers emulate mouseenter but never the matching
+// mouseleave, which left the flames burning forever, so only a real mouse
+// arms them.
 document.querySelectorAll('.section-nav a[data-route]').forEach(a => {
-  a.addEventListener('mouseenter', () => {
+  a.addEventListener('pointerenter', e => {
+    if (e.pointerType !== 'mouse') return;
     clearTimeout(navHoverTimer);
     navHoverTimer = setTimeout(() => {
       hoveredNavLink = a;
       if (ready) scheduleFrame();
     }, NAV_FIRE_HOVER_DELAY);
   });
-  a.addEventListener('mouseleave', () => {
+  a.addEventListener('pointerleave', () => {
     clearTimeout(navHoverTimer);
     if (hoveredNavLink === a) hoveredNavLink = null;
   });
