@@ -53,11 +53,54 @@
       text-decoration: underline;
       text-underline-offset: 3px;
     }
+    .section-nav {
+      position: fixed;
+      top: 44px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(700px, calc(100vw - 40px));
+      display: flex;
+      justify-content: flex-end;
+      font-family: 'EB Garamond', Garamond, Georgia, serif;
+      z-index: 10;
+      pointer-events: none;
+      padding: 0 45px;
+    }
+    .section-nav .nav-links {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 26px;
+      pointer-events: auto;
+    }
+    .section-nav a {
+      position: relative;
+      color: #2a1a0a;
+      text-decoration: none;
+      opacity: 0.6;
+      font-size: 14px;
+      letter-spacing: 0.02em;
+      transition: opacity 0.15s, color 0.15s;
+    }
+    .section-nav a:hover {
+      opacity: 1;
+      color: #c4402a;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
   </style>
   <script type="module" src="/src/main.js"></script>
 </head>
 <body>
   <canvas id="manuscript"></canvas>
+  <nav class="section-nav">
+    <div class="nav-links">
+      <a href="/" data-route="home">Home</a>
+      <a href="/travel" data-route="travel">Travel</a>
+      <a href="/whats-next" data-route="whats-next">What's Next</a>
+      <a href="/blog" data-route="blog">Blog</a>
+    </div>
+  </nav>
   <nav class="links">
     <a href="mailto:mihirxsharma15@gmail.com">mihirxsharma15 [at] gmail [dot] com</a>
     <a href="https://www.linkedin.com/in/MihirSharma15" target="_blank" rel="noopener">LinkedIn</a>

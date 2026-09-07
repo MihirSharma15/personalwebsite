@@ -1,5 +1,6 @@
 import { prepareWithSegments, layoutNextLine } from '@chenglou/pretext';
-import { PARAGRAPHS } from './content.js';
+import { SECTIONS } from './sections.js';
+import { initRouter, navigate } from './router.js';
 import {
   TEXT_COLOR, BG_COLOR,
   getResponsiveLayout, getPageOffset, getPageScale
@@ -8,7 +9,8 @@ import {
   loadDragonSprites, createDragon, updateDragonScale, updateDragon,
   getDragonExclusions, getFireExclusions, getFireInfluence,
   spawnFire, hasActiveFire, updateFire,
-  drawDragon, drawFire
+  drawDragon, drawFire,
+  createFireHost, spawnRadialFire
 } from './dragon.js';
 
 // ---- WebGL setup ----
@@ -108,13 +110,69 @@ canvas.addEventListener('touchmove', e => {
 }, { passive: false });
 canvas.addEventListener('touchend', () => { mouseDown = false; });
 
+// ---- Sections & routing ----
+let currentSection = SECTIONS[0];
+
+function sectionDocTitle(section) {
+  return section.id === 'home' ? section.title : `${section.title} · Mihir Sharma`;
+}
+
+function commitSection(section) {
+  currentSection = section;
+  document.title = sectionDocTitle(section);
+}
+
+function changeSection(section) {
+  if (section.id === currentSection.id) return;
+
+  document.title = sectionDocTitle(section);
+  currentSection = section;
+  rePrepareText(true);
+  textDirty = true;
+}
+
+let hasStarted = false;
+function handleSectionChange(section) {
+  if (!hasStarted) {
+    hasStarted = true;
+    commitSection(section);
+    return;
+  }
+  changeSection(section);
+}
+initRouter(handleSectionChange);
+
+document.querySelectorAll('.section-nav a[data-route]').forEach(a => {
+  const id = a.dataset.route;
+  a.addEventListener('click', e => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    let section = navigate(id);
+    if (section) changeSection(section);
+  });
+});
+
+// ---- Nav-link hover flames ----
+// Each link sits "in front of" a virtual dragon's mouth: hovering spawns a
+// radial burst of fire (reusing the dragon's own particle system) right
+// behind the link.
+let navFire = createFireHost();
+let hoveredNavLink = null;
+let lastNavFireSpawn = 0;
+const NAV_FIRE_SPAWN_INTERVAL = 200;
+
+document.querySelectorAll('.section-nav a[data-route]').forEach(a => {
+  a.addEventListener('mouseenter', () => { hoveredNavLink = a; if (ready) scheduleFrame(); });
+  a.addEventListener('mouseleave', () => { if (hoveredNavLink === a) hoveredNavLink = null; });
+});
+
 // ---- Text preparation ----
-let preparedParagraphs = PARAGRAPHS.map(p => prepareWithSegments(p, layout.font));
+let preparedParagraphs = currentSection.paragraphs.map(p => prepareWithSegments(p, layout.font));
 let lastFontSize = layout.fontSize;
 
-function rePrepareText() {
-  if (layout.fontSize !== lastFontSize) {
-    preparedParagraphs = PARAGRAPHS.map(p => prepareWithSegments(p, layout.font));
+function rePrepareText(force = false) {
+  if (force || layout.fontSize !== lastFontSize) {
+    preparedParagraphs = currentSection.paragraphs.map(p => prepareWithSegments(p, layout.font));
     lastFontSize = layout.fontSize;
   }
 }
@@ -304,6 +362,13 @@ function render(time) {
   if (hasFire) updateFire(dragon, time);
   if (moved || hasFire) textDirty = true;
 
+  if (hoveredNavLink && time - lastNavFireSpawn > NAV_FIRE_SPAWN_INTERVAL) {
+    lastNavFireSpawn = time;
+    let rect = hoveredNavLink.getBoundingClientRect();
+    spawnRadialFire(navFire, rect.left + rect.width / 2, rect.top + rect.height / 2, sc * 0.55);
+  }
+  if (hasActiveFire(navFire)) updateFire(navFire, time);
+
   if (textDirty) layoutText(offset.x, offset.y);
 
   let dpr = Math.ceil(window.devicePixelRatio || 1);
@@ -318,6 +383,7 @@ function render(time) {
 
   drawFire(ctx, dragon);
   drawDragon(ctx, dragon);
+  if (hasActiveFire(navFire)) drawFire(ctx, navFire);
 
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, offscreen);

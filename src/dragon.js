@@ -211,6 +211,32 @@ export function hasActiveFire(dragon) {
   return dragon.fire.length > 0;
 }
 
+// A standalone fire emitter not tied to the dragon's body — used for
+// decorative bursts (e.g. hovering a link) that share the same particle
+// physics/rendering as the dragon's own fire.
+export function createFireHost() {
+  return { fire: [], fireLastStep: 0 };
+}
+
+export function spawnRadialFire(host, x, y, scale = 1) {
+  let count = 2 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < count; i++) {
+    let angle = Math.random() * Math.PI * 2;
+    let speed = (20 + Math.random() * 16) * scale;
+    host.fire.push({
+      x: x + (Math.random() - 0.5) * 4,
+      y: y + (Math.random() - 0.5) * 4,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: (7 + Math.random() * 10) * scale,
+      life: 1,
+      maxLife: 10 + Math.floor(Math.random() * 6),
+      frame: 0,
+      color: Math.floor(Math.random() * 3)
+    });
+  }
+}
+
 export function updateFire(dragon, time) {
   if (time - dragon.fireLastStep < FIRE_STEP_INTERVAL) return;
   dragon.fireLastStep = time;
