@@ -18,9 +18,7 @@ export const SECTIONS = [
     label: 'Blog',
     title: 'Blog',
     paragraphs: [
-      `I've been meaning to write down the things I'm learning and thinking about — a little slower and more considered than a tweet, a little less formal than anything else.`,
-
-      `Nothing's posted here yet, but this page is where it'll live. Check back soon.`
+      `TBD`
     ]
   },
   {
