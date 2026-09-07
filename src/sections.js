@@ -27,7 +27,7 @@ export const SECTIONS = [
     label: 'Travel',
     title: 'Travel',
     paragraphs: [
-      `I love to travel. Going to India on a FLAS scholarship, as well as study abroad at NUS in Singapore has greatly shaped my perspective and I'm always looking forward to my next destination.`,
+      `I love to travel. Going to India on a FLAS scholarship, as well as studying abroad at NUS in Singapore has greatly shaped my perspective and I'm always looking forward to my next destination.`,
       `Where I've been:`,
       [
         'Jaipur, India',
