@@ -264,7 +264,6 @@ let textDirty = true;
 const MIN_LINE_WIDTH = 40;
 const TEXT_EXCLUSION_PAD = 10;
 const PARAGRAPH_EXTRA_GAP = 0.15;
-const LINKS_BOTTOM_RESERVE = 20;
 const LIST_LINE_HEIGHT_RATIO = 0.25;
 // How far the top fade (on scrollable pages) extends, as a fraction of the
 // dragon's actual coil reach. 1 = fades over the coil's full ~430px depth;
@@ -277,8 +276,20 @@ const FADE_REACH_RATIO = 0.2;
 let scrollY = 0;
 let contentHeight = 0;
 
+// Measured from the actual .links footer nav rather than a fixed constant —
+// on mobile it wraps into a 3-line stacked column (see index.html's
+// @media rule) which is much taller than the single-row desktop layout, so
+// a hardcoded reserve either wastes space on desktop or gets run under on
+// mobile.
+let linksNavEl = document.querySelector('.links');
+function getLinksBottomReserve() {
+  if (!linksNavEl) return 20;
+  let rect = linksNavEl.getBoundingClientRect();
+  return Math.max(20, Math.round(window.innerHeight - rect.top + 12));
+}
+
 function maxScrollFor(height) {
-  let viewportBottom = layout.pageHeight - layout.margin - LINKS_BOTTOM_RESERVE;
+  let viewportBottom = layout.pageHeight - layout.margin - getLinksBottomReserve();
   return Math.max(0, height - viewportBottom);
 }
 
@@ -517,7 +528,7 @@ function render(time) {
   }
 
   textClipTop = offset.y + layout.margin;
-  textClipBottom = offset.y + layout.pageHeight - layout.margin - LINKS_BOTTOM_RESERVE;
+  textClipBottom = offset.y + layout.pageHeight - layout.margin - getLinksBottomReserve();
   let scrollable = maxScrollFor(contentHeight) > 0;
 
   if (scrollable) {

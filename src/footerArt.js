@@ -25,6 +25,12 @@ const BOTTOM_FADE_RATIO = 0.9;
 // of the image is visible below this point still depends on the responsive
 // band height, but where it *starts* is always exactly this.
 const SOURCE_TOP_RATIO = 0;
+// `scale` (viewportWidth / art.width) shrinks a lot on narrow viewports,
+// which inflates the vertical sample height and shifts what a fixed-ratio
+// fade lands on (e.g. mountains on desktop, the church on mobile, for the
+// exact same source crop). Flooring it keeps the vertical framing
+// consistent across viewport widths.
+const MIN_SAMPLE_SCALE = 0.75;
 
 function hexToRgb(hex) {
   let n = parseInt(hex.replace('#', ''), 16);
@@ -97,7 +103,7 @@ export function drawFooterArt(ctx, viewportWidth, viewportHeight, textBottomY) {
   let bandTop = viewportHeight - bandH;
 
   let scale = viewportWidth / art.width;
-  let visibleSrcH = bandH / scale;
+  let visibleSrcH = bandH / Math.max(scale, MIN_SAMPLE_SCALE);
   let sy = Math.max(0, Math.min(art.height - visibleSrcH, art.height * SOURCE_TOP_RATIO));
 
   let bw = Math.max(1, Math.round(viewportWidth));
