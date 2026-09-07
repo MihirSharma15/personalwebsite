@@ -27,16 +27,53 @@ export const SECTIONS = [
     label: 'Travel',
     title: 'Travel',
     paragraphs: [
-      `Jaipur and Singapore were where this started, and I've been trying to keep it going since — a running account of the places I've been and what stuck with me from each.`,
+      `I love to travel. Going to India on a FLAS scholarship, as well as study abroad at NUS in Singapore has greatly shaped my perspective and I'm always looking forward to my next destination.`,
+      `Where I've been:`,
+      [
+        'Jaipur, India',
+        'Singapore',
+        'Kuala Lumpur, Malaysia',
+        'Johor Bahru, Malaysia',
+        'Da Nang, Vietnam',
+        'Hoi An, Vietnam',
+        'Bangkok, Thailand',
+        'Phuket, Thailand',
+        'Phi Phi Islands, Thailand',
+        'Chiang Mai, Thailand',
+        'Taipei, Taiwan',
+        'Tokyo, Japan',
+        'Milan, Italy',
+        'Monza, Italy',
+        'Turin, Italy',
+        'Florence, Italy',
+        'Rome, Italy',
+        'Bolzano, Italy',
+        'Renon, Italy',
+        'Cinque Terre, Italy',
+        'Lake Como, Italy',
+        'Brixen, Italy',
+        'Villnöß, Italy',
+        'Merano, Italy'
+      ],
 
-      `Still writing the first entry. Check back soon.`
-    ]
+      `Did I make this list by city name to inflate it? Yes ;)`,
+      ' '
+    ],
+    links: {
+      FLAS: 'https://en.wikipedia.org/wiki/Foreign_Language_Area_Studies'
+    }
   },
   {
     id: 'whats-next',
     path: '/whats-next',
     label: "What's Next",
     title: "What's Next",
-    paragraphs: []
+    paragraphs: [
+      "Updated: Sept 7th 2026",
+      { text: "I'm currently graduating in December 2026 and looking for startups to join.", bold: true },
+      "I am optimizing for talent density, learning oppertunities, and fun.",
+      "Friends say I'm incredibly articulate, high agency, and an out of the box thinker :)",
+      "If you are looking for someone of that description: contact me at mihirxsharma15[at]gmail[dot]com"
+    ]
   }
 ];

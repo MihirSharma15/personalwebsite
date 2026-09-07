@@ -107,6 +107,19 @@ function getRestPose(startX, startY, scale) {
   return poses;
 }
 
+// How far below its own anchor Y the idle coiled rest pose actually reaches
+// (its tail spirals much further down than the head) — used by callers that
+// need to keep other content clear of it instead of guessing a fixed offset.
+export function getRestPoseBottomReach(scale = 1) {
+  let rest = getRestPose(0, 0, scale);
+  let maxY = -Infinity;
+  rest.forEach((p, i) => {
+    let r = getSegmentWidth(i) * scale / 2;
+    maxY = Math.max(maxY, p.y + r);
+  });
+  return maxY;
+}
+
 export function updateDragon(dragon, time, mouseX, mouseY, idle = false, restX = 0, restY = 0) {
   if (time - dragon.lastStepTime < dragon.stepInterval) return false;
   dragon.lastStepTime = time;

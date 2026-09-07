@@ -18,7 +18,7 @@ export const MOUSE_IDLE_TIMEOUT = 2000;
 export function getResponsiveLayout() {
   let pageWidth = Math.min(BASE_PAGE_WIDTH, window.innerWidth - 40);
   let widthScale = pageWidth / BASE_PAGE_WIDTH;
-  let pageHeight = window.innerHeight - 60;
+  let pageHeight = window.innerHeight;
   let margin = Math.round(BASE_MARGIN * widthScale);
   let fontScale = 0.4 + 0.6 * widthScale;
   let fontSize = Math.max(15, Math.round(BASE_FONT_SIZE * fontScale));

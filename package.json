@@ -11,6 +11,7 @@
     "vite": "^5.4.0"
   },
   "dependencies": {
-    "@chenglou/pretext": "^0.0.3"
+    "@chenglou/pretext": "^0.0.3",
+    "ditherjs": "^0.10.0"
   }
 }
