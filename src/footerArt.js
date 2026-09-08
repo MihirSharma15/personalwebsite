@@ -178,19 +178,19 @@ export const dolomitesArt = createFooterArt({ src: '/dolomiteschurch.png' });
 export const gardenArt = createFooterArt({
   src: '/chinesegarden.jpg',
   // Where the crop starts in the source photo: 0 = top of the sky,
-  // 1 = bottom of the trees. 0.156 starts it just above the pagoda's finial.
-  sourceTopRatio: 0.156,
-  // Band height as a share of the viewport. The band is anchored to the
-  // bottom and the pagoda holds a fixed pixel offset from its top edge, so
-  // raising this lifts the temple up the page. Only bites above ~700px wide;
-  // narrower viewports stay capped by the image's aspect ratio.
-  maxBandHeightRatio: 0.52,
+  // 1 = bottom of the trees.
+  sourceTopRatio: 0.5,
+  // Band height as a share of viewport height. The band is bottom-anchored,
+  // so raising this grows it upward. It's only the ceiling: the band is the
+  // smaller of this and (viewport width × the image's aspect), which is why
+  // narrow viewports stay a short strip no matter how high this goes.
+  maxBandHeightRatio: 1,
   // Share of the band spent fading in at the top edge. Lower = reaches full
   // strength sooner, so more of the pagoda reads as solid.
-  topFadeRatio: 0.26,
+  topFadeRatio: 0.9,
   // Share of the band spent fading out at the bottom, which keeps the footer
   // links legible. Higher = starts fading earlier and more gradually.
-  bottomFadeRatio: 0.35,
+  bottomFadeRatio: 0.9,
   // Overall ink strength, 0–1. Turn this down if the picture ever competes
   // with the quote sitting on top of it.
   maxAlpha: 0.4
