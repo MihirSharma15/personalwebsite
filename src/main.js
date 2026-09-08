@@ -575,7 +575,7 @@ function drawQuote(targetCtx, availTop, availBottom) {
   let lines = [];
 
   while (size > minFontSize) {
-    targetCtx.font = `italic ${size}px ${FONT_STACK}`;
+    targetCtx.font = `${size}px ${FONT_STACK}`;
     lines = wrapQuote(targetCtx, maxWidth);
     if (lines.length * size * lineHeightRatio <= availHeight) break;
     size -= 1;
@@ -585,7 +585,7 @@ function drawQuote(targetCtx, availTop, availBottom) {
   let startY = availTop + (availHeight - lines.length * lineHeight) / 2 + verticalOffset;
 
   targetCtx.save();
-  targetCtx.font = `italic ${size}px ${FONT_STACK}`;
+  targetCtx.font = `${size}px ${FONT_STACK}`;
   targetCtx.fillStyle = TEXT_COLOR;
   targetCtx.textAlign = 'center';
   targetCtx.textBaseline = 'top';
