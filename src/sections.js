@@ -75,5 +75,15 @@ export const SECTIONS = [
       "Friends say I'm incredibly articulate, high agency, and an out of the box thinker :)",
       "If you are looking for someone of that description: contact me at mihirxsharma15[at]gmail[dot]com"
     ]
+  },
+  // Deliberately unlisted: reachable only by typing the path. The nav in
+  // index.html is hand-written, so nothing here surfaces it.
+  {
+    id: 'quote',
+    path: '/qutoe',
+    label: 'Quote',
+    title: 'Quote',
+    quote: true,
+    paragraphs: []
   }
 ];

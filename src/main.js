@@ -13,7 +13,8 @@ import {
   createFireHost, spawnRadialFire,
   getRestPoseBottomReach
 } from './dragon.js';
-import { loadFooterArt, drawFooterArt } from './footerArt.js';
+import { loadFooterArt, dolomitesArt, gardenArt } from './footerArt.js';
+import { pickQuote } from './quotes.js';
 
 // ---- WebGL setup ----
 let canvas = document.getElementById('manuscript');
@@ -515,6 +516,61 @@ function drawText(targetCtx, offsetX, offsetY) {
   targetCtx.restore();
 }
 
+// ---- Quote page ----
+// Picked once per page load, so a refresh is what rerolls it.
+const currentQuote = pickQuote();
+const QUOTE_MAX_FONT = 46;
+const QUOTE_MIN_FONT = 15;
+const QUOTE_LINE_RATIO = 1.42;
+const QUOTE_WIDTH_RATIO = 0.92;
+const QUOTE_ART_OVERLAP = 0.3;
+
+function wrapQuote(targetCtx, maxWidth) {
+  let lines = [];
+  let line = '';
+  for (let word of currentQuote.split(' ')) {
+    let candidate = line ? `${line} ${word}` : word;
+    if (line && targetCtx.measureText(candidate).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+// Shrinks until the whole quote fits the space between the dragon's rest
+// pose and the footer art — the list runs from four words to fifty, so a
+// fixed size would either look timid or overflow.
+function drawQuote(targetCtx, availTop, availBottom) {
+  let maxWidth = Math.min(layout.pageWidth, window.innerWidth - layout.margin * 2) * QUOTE_WIDTH_RATIO;
+  let availHeight = availBottom - availTop;
+  let size = QUOTE_MAX_FONT;
+  let lines = [];
+
+  while (size > QUOTE_MIN_FONT) {
+    targetCtx.font = `italic ${size}px ${FONT_STACK}`;
+    lines = wrapQuote(targetCtx, maxWidth);
+    if (lines.length * size * QUOTE_LINE_RATIO <= availHeight) break;
+    size -= 1;
+  }
+
+  let lineHeight = size * QUOTE_LINE_RATIO;
+  let startY = availTop + (availHeight - lines.length * lineHeight) / 2;
+
+  targetCtx.save();
+  targetCtx.font = `italic ${size}px ${FONT_STACK}`;
+  targetCtx.fillStyle = TEXT_COLOR;
+  targetCtx.textAlign = 'center';
+  targetCtx.textBaseline = 'top';
+  for (let i = 0; i < lines.length; i++) {
+    targetCtx.fillText(lines[i], window.innerWidth / 2, Math.round(startY + i * lineHeight));
+  }
+  targetCtx.restore();
+}
+
 // ---- Render loop ----
 let frameScheduled = false;
 
@@ -550,7 +606,11 @@ function render(time) {
     let textBottomY = textLines.length
       ? offset.y - scrollY + Math.max(...textLines.map(l => l.y)) + layout.lineHeight
       : null;
-    drawFooterArt(ctx, window.innerWidth, window.innerHeight, textBottomY);
+    dolomitesArt.draw(ctx, window.innerWidth, window.innerHeight, textBottomY);
+  } else if (currentSection.quote) {
+    // No text boundary: the quote is vertically centred well above the band,
+    // and letting it push the fade down would swallow the pagoda.
+    gardenArt.draw(ctx, window.innerWidth, window.innerHeight, null);
   }
 
   textClipTop = offset.y + layout.margin;
@@ -603,6 +663,16 @@ function render(time) {
     ctx.translate(offset.x, offset.y - scrollY);
     drawText(ctx, offset.x, offset.y - scrollY);
     ctx.restore();
+  }
+
+  if (currentSection.quote) {
+    // The quote may run into the band's faded top edge but stops before the
+    // pagoda itself — reserving the whole band instead squeezes the quote up
+    // into the dragon on desktop, and letting it run the full height buries
+    // the pagoda on mobile.
+    let bandH = gardenArt.bandHeight(window.innerWidth, window.innerHeight);
+    let pagodaTop = window.innerHeight - bandH + bandH * QUOTE_ART_OVERLAP;
+    drawQuote(ctx, textClipTop, Math.min(textClipBottom, pagodaTop));
   }
 
   drawFire(ctx, dragon);

@@ -1,10 +1,9 @@
 import DitherJS from 'ditherjs';
 import { BG_COLOR } from './config.js';
 
-// A dithered, single-ink illustration used as a quiet full-width footer on
-// the home page: the Dolomites, reduced to one dark-tan ink against the
-// page's own cream so it reads as an etching sitting behind the text.
-const IMAGE_SRC = '/dolomiteschurch.png';
+// A dithered, single-ink illustration used as a quiet full-width footer:
+// a photo reduced to one dark-tan ink against the page's own cream so it
+// reads as an etching sitting behind the text.
 const INK_COLOR = '#6e4c30';
 const RENDER_WIDTH = 1200;
 const DITHER_STEP = 1;
@@ -50,100 +49,142 @@ function brightenGrayscale(imageData, gamma) {
   }
 }
 
-let art = { canvas: null, width: 0, height: 0, ready: false };
-
 // Scratch buffer sized to just the footer band. The fade mask is composited
 // here (in isolation) rather than directly on the shared page canvas,
 // because `destination-in` clears everything *outside* the drawn shape —
 // on the shared canvas that would erase the whole page above the band.
+// Shared across instances: only one band is drawn per frame.
 let scratch = document.createElement('canvas');
 let scratchCtx = scratch.getContext('2d');
 
-export function loadFooterArt() {
-  return new Promise(resolve => {
-    let img = new Image();
-    img.onload = () => {
-      let w = RENDER_WIDTH;
-      let h = Math.round(w * (img.naturalHeight / img.naturalWidth));
+// Each page gets its own instance so the crop and fade can be framed around
+// that particular photo's subject.
+export function createFooterArt(options) {
+  const cfg = {
+    sourceTopRatio: SOURCE_TOP_RATIO,
+    topFadeRatio: TOP_FADE_RATIO,
+    maxAlpha: MAX_ALPHA,
+    maxBandHeightRatio: MAX_BAND_HEIGHT_RATIO,
+    bottomFadeRatio: BOTTOM_FADE_RATIO,
+    ...options
+  };
 
-      let src = document.createElement('canvas');
-      src.width = w;
-      src.height = h;
-      let sctx = src.getContext('2d');
-      sctx.drawImage(img, 0, 0, w, h);
+  let art = { canvas: null, width: 0, height: 0, ready: false };
 
-      let imageData = sctx.getImageData(0, 0, w, h);
-      brightenGrayscale(imageData, BRIGHTEN_GAMMA);
-      let dither = new DitherJS({
-        algorithm: 'atkinson',
-        step: DITHER_STEP,
-        palette: [hexToRgb(BG_COLOR), hexToRgb(INK_COLOR)]
-      });
-      dither.ditherImageData(imageData);
-      sctx.putImageData(imageData, 0, 0);
+  function load() {
+    return new Promise(resolve => {
+      let img = new Image();
+      img.onload = () => {
+        let w = RENDER_WIDTH;
+        let h = Math.round(w * (img.naturalHeight / img.naturalWidth));
 
-      art = { canvas: src, width: w, height: h, ready: true };
-      resolve(art);
-    };
-    img.onerror = () => resolve(art);
-    img.src = IMAGE_SRC;
-  });
+        let src = document.createElement('canvas');
+        src.width = w;
+        src.height = h;
+        let sctx = src.getContext('2d');
+        sctx.drawImage(img, 0, 0, w, h);
+
+        let imageData = sctx.getImageData(0, 0, w, h);
+        brightenGrayscale(imageData, BRIGHTEN_GAMMA);
+        let dither = new DitherJS({
+          algorithm: 'atkinson',
+          step: DITHER_STEP,
+          palette: [hexToRgb(BG_COLOR), hexToRgb(INK_COLOR)]
+        });
+        dither.ditherImageData(imageData);
+        sctx.putImageData(imageData, 0, 0);
+
+        art = { canvas: src, width: w, height: h, ready: true };
+        resolve(art);
+      };
+      img.onerror = () => resolve(art);
+      img.src = cfg.src;
+    });
+  }
+
+  // How tall the band will be — so a page can keep its own content clear of
+  // the artwork instead of stacking on top of it.
+  function bandHeight(viewportWidth, viewportHeight) {
+    if (!art.ready) return 0;
+    let aspect = art.height / art.width;
+    let maxBandH = Math.min(Math.max(viewportHeight * cfg.maxBandHeightRatio, MIN_BAND_HEIGHT), MAX_BAND_HEIGHT);
+    return Math.min(viewportWidth * aspect, maxBandH);
+  }
+
+  // Draws the dithered artwork as a bottom-anchored, full-width band behind
+  // the page content. `textBottomY` is the viewport-space Y of the lowest
+  // line of body text (or null if there is none) — the band fades out before
+  // it reaches that line so the art never fights with the text for legibility.
+  function draw(ctx, viewportWidth, viewportHeight, textBottomY) {
+    if (!art.ready) return;
+
+    let bandH = bandHeight(viewportWidth, viewportHeight);
+    let bandTop = viewportHeight - bandH;
+
+    let scale = viewportWidth / art.width;
+    let visibleSrcH = bandH / Math.max(scale, MIN_SAMPLE_SCALE);
+    let sy = Math.max(0, Math.min(art.height - visibleSrcH, art.height * cfg.sourceTopRatio));
+
+    let bw = Math.max(1, Math.round(viewportWidth));
+    let bh = Math.max(1, Math.round(bandH));
+    if (scratch.width !== bw || scratch.height !== bh) {
+      scratch.width = bw;
+      scratch.height = bh;
+    } else {
+      scratchCtx.clearRect(0, 0, bw, bh);
+    }
+
+    scratchCtx.globalAlpha = cfg.maxAlpha;
+    scratchCtx.imageSmoothingEnabled = false;
+    scratchCtx.drawImage(art.canvas, 0, sy, art.width, visibleSrcH, 0, 0, bw, bh);
+    scratchCtx.globalAlpha = 1;
+
+    // Local (scratch-space) fade boundary: natural soft top edge, pushed
+    // further down the band if the text runs long enough to reach it.
+    let visibleFrom = bh * cfg.topFadeRatio;
+    if (textBottomY != null) {
+      let localTextBoundary = (textBottomY + TEXT_GAP) - bandTop;
+      if (localTextBoundary > visibleFrom) visibleFrom = Math.min(localTextBoundary, bh);
+    }
+
+    let grad = scratchCtx.createLinearGradient(0, 0, 0, visibleFrom);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,1)');
+    scratchCtx.globalCompositeOperation = 'destination-in';
+    scratchCtx.fillStyle = grad;
+    scratchCtx.fillRect(0, 0, bw, bh);
+
+    // Also fade out right at the very bottom edge, so the fixed footer links
+    // (email / LinkedIn / X) sitting on top of the canvas stay legible.
+    let bottomFadeStart = Math.max(visibleFrom, bh * (1 - cfg.bottomFadeRatio));
+    let bottomGrad = scratchCtx.createLinearGradient(0, bottomFadeStart, 0, bh);
+    bottomGrad.addColorStop(0, 'rgba(0,0,0,1)');
+    bottomGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    scratchCtx.fillStyle = bottomGrad;
+    scratchCtx.fillRect(0, 0, bw, bh);
+    scratchCtx.globalCompositeOperation = 'source-over';
+
+    ctx.drawImage(scratch, 0, bandTop);
+  }
+
+  return { load, draw, bandHeight };
 }
 
-// Draws the dithered artwork as a bottom-anchored, full-width band behind
-// the page content. `textBottomY` is the viewport-space Y of the lowest
-// line of body text (or null if there is none) — the band fades out before
-// it reaches that line so the art never fights with the text for legibility.
-export function drawFooterArt(ctx, viewportWidth, viewportHeight, textBottomY) {
-  if (!art.ready) return;
+export const dolomitesArt = createFooterArt({ src: '/dolomiteschurch.png' });
 
-  let aspect = art.height / art.width;
-  let maxBandH = Math.min(Math.max(viewportHeight * MAX_BAND_HEIGHT_RATIO, MIN_BAND_HEIGHT), MAX_BAND_HEIGHT);
-  let bandH = Math.min(viewportWidth * aspect, maxBandH);
-  let bandTop = viewportHeight - bandH;
+// The pagoda is the subject, not texture along a horizon, so this one is
+// framed around it: a taller band, a crop starting just above the finial, a
+// top fade that finishes before the roofline, and a much later bottom fade so
+// the temple reads as solid ink instead of dissolving the way the Dolomites
+// treeline is allowed to.
+export const gardenArt = createFooterArt({
+  src: '/chinesegarden.jpg',
+  sourceTopRatio: 0.156,
+  topFadeRatio: 0.26,
+  bottomFadeRatio: 0.35,
+  maxBandHeightRatio: 0.42
+});
 
-  let scale = viewportWidth / art.width;
-  let visibleSrcH = bandH / Math.max(scale, MIN_SAMPLE_SCALE);
-  let sy = Math.max(0, Math.min(art.height - visibleSrcH, art.height * SOURCE_TOP_RATIO));
-
-  let bw = Math.max(1, Math.round(viewportWidth));
-  let bh = Math.max(1, Math.round(bandH));
-  if (scratch.width !== bw || scratch.height !== bh) {
-    scratch.width = bw;
-    scratch.height = bh;
-  } else {
-    scratchCtx.clearRect(0, 0, bw, bh);
-  }
-
-  scratchCtx.globalAlpha = MAX_ALPHA;
-  scratchCtx.imageSmoothingEnabled = false;
-  scratchCtx.drawImage(art.canvas, 0, sy, art.width, visibleSrcH, 0, 0, bw, bh);
-  scratchCtx.globalAlpha = 1;
-
-  // Local (scratch-space) fade boundary: natural soft top edge, pushed
-  // further down the band if the text runs long enough to reach it.
-  let visibleFrom = bh * TOP_FADE_RATIO;
-  if (textBottomY != null) {
-    let localTextBoundary = (textBottomY + TEXT_GAP) - bandTop;
-    if (localTextBoundary > visibleFrom) visibleFrom = Math.min(localTextBoundary, bh);
-  }
-
-  let grad = scratchCtx.createLinearGradient(0, 0, 0, visibleFrom);
-  grad.addColorStop(0, 'rgba(0,0,0,0)');
-  grad.addColorStop(1, 'rgba(0,0,0,1)');
-  scratchCtx.globalCompositeOperation = 'destination-in';
-  scratchCtx.fillStyle = grad;
-  scratchCtx.fillRect(0, 0, bw, bh);
-
-  // Also fade out right at the very bottom edge, so the fixed footer links
-  // (email / LinkedIn / X) sitting on top of the canvas stay legible.
-  let bottomFadeStart = Math.max(visibleFrom, bh * (1 - BOTTOM_FADE_RATIO));
-  let bottomGrad = scratchCtx.createLinearGradient(0, bottomFadeStart, 0, bh);
-  bottomGrad.addColorStop(0, 'rgba(0,0,0,1)');
-  bottomGrad.addColorStop(1, 'rgba(0,0,0,0)');
-  scratchCtx.fillStyle = bottomGrad;
-  scratchCtx.fillRect(0, 0, bw, bh);
-  scratchCtx.globalCompositeOperation = 'source-over';
-
-  ctx.drawImage(scratch, 0, bandTop);
+export function loadFooterArt() {
+  return Promise.all([dolomitesArt.load(), gardenArt.load()]);
 }
