@@ -71,7 +71,7 @@ export const SECTIONS = [
     paragraphs: [
       "Updated: Sept 7th 2026",
       { text: "I'm currently graduating in December 2026 and looking for startups to join.", bold: true },
-      "I am optimizing for talent density, learning oppertunities, and fun.",
+      "I am optimizing for talent density, learning opportunities, and fun.",
       "Friends say I'm incredibly articulate, high agency, and an out of the box thinker :)",
       "If you are looking for someone of that description: contact me at mihirxsharma15[at]gmail[dot]com"
     ]
