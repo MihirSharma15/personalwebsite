@@ -182,7 +182,11 @@ export const gardenArt = createFooterArt({
   sourceTopRatio: 0.156,
   topFadeRatio: 0.26,
   bottomFadeRatio: 0.35,
-  maxBandHeightRatio: 0.42
+  // Taller than the Dolomites band so the pagoda sits higher up the page.
+  // The band is bottom-anchored and the pagoda keeps a fixed pixel offset
+  // from its top edge, so raising this is what lifts the temple. Only bites
+  // above ~700px wide; narrower viewports stay capped by the image aspect.
+  maxBandHeightRatio: 0.52
 });
 
 export function loadFooterArt() {
