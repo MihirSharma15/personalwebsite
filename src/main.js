@@ -112,9 +112,22 @@ canvas.addEventListener('wheel', e => {
 canvas.addEventListener('mousedown', () => { mouseDown = true; if (ready) scheduleFrame(); });
 canvas.addEventListener('mouseup', () => { mouseDown = false; });
 canvas.addEventListener('mouseleave', () => { mouseDown = false; });
+// A drag and a dragon-chase are the same gesture on a touchscreen, and there
+// is no wheel to fall back on. On a page long enough to scroll the drag has
+// to win outright: letting the dragon follow the finger also spawned fire and
+// reflowed the text around it every frame, so the page churned under the
+// touch instead of moving.
+let touchScrolling = false;
+let touchStartY = 0;
+let touchStartScrollY = 0;
+
 canvas.addEventListener('touchstart', e => {
   e.preventDefault();
   let t = e.touches[0];
+  touchStartY = t.clientY;
+  touchStartScrollY = scrollY;
+  touchScrolling = maxScrollFor(contentHeight) > 0;
+  if (touchScrolling) return;
   mouse.x = t.clientX; mouse.y = t.clientY;
   mouseDown = true;
   if (ready) scheduleFrame();
@@ -122,10 +135,15 @@ canvas.addEventListener('touchstart', e => {
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   let t = e.touches[0];
-  mouse.x = t.clientX; mouse.y = t.clientY;
+  if (touchScrolling) {
+    scrollY = Math.min(Math.max(0, touchStartScrollY + (touchStartY - t.clientY)), maxScrollFor(contentHeight));
+    textDirty = true;
+  } else {
+    mouse.x = t.clientX; mouse.y = t.clientY;
+  }
   if (ready) scheduleFrame();
 }, { passive: false });
-canvas.addEventListener('touchend', () => { mouseDown = false; });
+canvas.addEventListener('touchend', () => { mouseDown = false; touchScrolling = false; });
 
 // ---- Sections & routing ----
 let currentSection = SECTIONS[0];
