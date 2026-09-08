@@ -80,7 +80,7 @@ export const SECTIONS = [
   // index.html is hand-written, so nothing here surfaces it.
   {
     id: 'quote',
-    path: '/qutoe',
+    path: '/quote',
     label: 'Quote',
     title: 'Quote',
     quote: true,

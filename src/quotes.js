@@ -1,4 +1,4 @@
-// One of these is picked at random each time /qutoe loads. Wording and
+// One of these is picked at random each time /quote loads. Wording and
 // punctuation are kept exactly as written — quotation marks only appear on
 // the ones that were quoted in the first place.
 export const QUOTES = [
