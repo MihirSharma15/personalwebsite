@@ -172,21 +172,28 @@ export function createFooterArt(options) {
 
 export const dolomitesArt = createFooterArt({ src: '/dolomiteschurch.png' });
 
-// The pagoda is the subject, not texture along a horizon, so this one is
-// framed around it: a taller band, a crop starting just above the finial, a
-// top fade that finishes before the roofline, and a much later bottom fade so
-// the temple reads as solid ink instead of dissolving the way the Dolomites
-// treeline is allowed to.
+// The /quote backdrop. The quote is drawn on top of this, so nothing here
+// needs to leave room for text — every knob below is purely about how the
+// picture itself looks.
 export const gardenArt = createFooterArt({
   src: '/chinesegarden.jpg',
+  // Where the crop starts in the source photo: 0 = top of the sky,
+  // 1 = bottom of the trees. 0.156 starts it just above the pagoda's finial.
   sourceTopRatio: 0.156,
+  // Band height as a share of the viewport. The band is anchored to the
+  // bottom and the pagoda holds a fixed pixel offset from its top edge, so
+  // raising this lifts the temple up the page. Only bites above ~700px wide;
+  // narrower viewports stay capped by the image's aspect ratio.
+  maxBandHeightRatio: 0.52,
+  // Share of the band spent fading in at the top edge. Lower = reaches full
+  // strength sooner, so more of the pagoda reads as solid.
   topFadeRatio: 0.26,
+  // Share of the band spent fading out at the bottom, which keeps the footer
+  // links legible. Higher = starts fading earlier and more gradually.
   bottomFadeRatio: 0.35,
-  // Taller than the Dolomites band so the pagoda sits higher up the page.
-  // The band is bottom-anchored and the pagoda keeps a fixed pixel offset
-  // from its top edge, so raising this is what lifts the temple. Only bites
-  // above ~700px wide; narrower viewports stay capped by the image aspect.
-  maxBandHeightRatio: 0.52
+  // Overall ink strength, 0–1. Turn this down if the picture ever competes
+  // with the quote sitting on top of it.
+  maxAlpha: 0.4
 });
 
 export function loadFooterArt() {

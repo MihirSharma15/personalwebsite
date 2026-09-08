@@ -519,11 +519,17 @@ function drawText(targetCtx, offsetX, offsetY) {
 // ---- Quote page ----
 // Picked once per page load, so a refresh is what rerolls it.
 const currentQuote = pickQuote();
-const QUOTE_MAX_FONT = 46;
-const QUOTE_MIN_FONT = 15;
-const QUOTE_LINE_RATIO = 1.42;
-const QUOTE_WIDTH_RATIO = 0.92;
-const QUOTE_ART_OVERLAP = 0.3;
+// Everything tunable about the quote itself. The artwork behind it has its
+// own knobs on `gardenArt` in footerArt.js — the two no longer interact, so
+// either can be changed without the other needing to move out of the way.
+const QUOTE_SETTINGS = {
+  maxFontSize: 46,       // px ceiling — short quotes render at exactly this
+  minFontSize: 15,       // px floor — the 50-word quote shrinks toward this
+  lineHeightRatio: 1.42, // line spacing, as a multiple of the font size
+  widthRatio: 0.92,      // share of the page column a line fills before wrapping
+  verticalOffset: 0,     // nudge the whole block up (negative) or down (positive), px
+  overDragon: true       // true = quote paints over the dragon too; false = dragon in front
+};
 
 function wrapQuote(targetCtx, maxWidth) {
   let lines = [];
@@ -541,24 +547,24 @@ function wrapQuote(targetCtx, maxWidth) {
   return lines;
 }
 
-// Shrinks until the whole quote fits the space between the dragon's rest
-// pose and the footer art — the list runs from four words to fifty, so a
-// fixed size would either look timid or overflow.
+// Shrinks until the whole quote fits the page — the list runs from four
+// words to fifty, so a fixed size would either look timid or overflow.
 function drawQuote(targetCtx, availTop, availBottom) {
-  let maxWidth = Math.min(layout.pageWidth, window.innerWidth - layout.margin * 2) * QUOTE_WIDTH_RATIO;
+  let { maxFontSize, minFontSize, lineHeightRatio, widthRatio, verticalOffset } = QUOTE_SETTINGS;
+  let maxWidth = Math.min(layout.pageWidth, window.innerWidth - layout.margin * 2) * widthRatio;
   let availHeight = availBottom - availTop;
-  let size = QUOTE_MAX_FONT;
+  let size = maxFontSize;
   let lines = [];
 
-  while (size > QUOTE_MIN_FONT) {
+  while (size > minFontSize) {
     targetCtx.font = `italic ${size}px ${FONT_STACK}`;
     lines = wrapQuote(targetCtx, maxWidth);
-    if (lines.length * size * QUOTE_LINE_RATIO <= availHeight) break;
+    if (lines.length * size * lineHeightRatio <= availHeight) break;
     size -= 1;
   }
 
-  let lineHeight = size * QUOTE_LINE_RATIO;
-  let startY = availTop + (availHeight - lines.length * lineHeight) / 2;
+  let lineHeight = size * lineHeightRatio;
+  let startY = availTop + (availHeight - lines.length * lineHeight) / 2 + verticalOffset;
 
   targetCtx.save();
   targetCtx.font = `italic ${size}px ${FONT_STACK}`;
@@ -665,19 +671,18 @@ function render(time) {
     ctx.restore();
   }
 
-  if (currentSection.quote) {
-    // The quote may run into the band's faded top edge but stops before the
-    // pagoda itself — reserving the whole band instead squeezes the quote up
-    // into the dragon on desktop, and letting it run the full height buries
-    // the pagoda on mobile.
-    let bandH = gardenArt.bandHeight(window.innerWidth, window.innerHeight);
-    let pagodaTop = window.innerHeight - bandH + bandH * QUOTE_ART_OVERLAP;
-    drawQuote(ctx, textClipTop, Math.min(textClipBottom, pagodaTop));
-  }
+  // The quote centres in the full page and paints over whatever is already
+  // there — the band, and the dragon too unless `overDragon` is turned off.
+  // Nothing has to reserve space or dodge, so the artwork behind it can be
+  // reframed freely.
+  let drawQuoteNow = () => drawQuote(ctx, textClipTop, textClipBottom);
+  if (currentSection.quote && !QUOTE_SETTINGS.overDragon) drawQuoteNow();
 
   drawFire(ctx, dragon);
   drawDragon(ctx, dragon);
   if (hasActiveFire(navFire)) drawFire(ctx, navFire);
+
+  if (currentSection.quote && QUOTE_SETTINGS.overDragon) drawQuoteNow();
 
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, offscreen);
