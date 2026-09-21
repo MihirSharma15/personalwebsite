@@ -103,50 +103,35 @@ canvas.addEventListener('click', e => {
   let hit = hitTestLink(e.clientX, e.clientY);
   if (hit) window.open(hit.url, '_blank', 'noopener');
 });
-canvas.addEventListener('wheel', e => {
-  e.preventDefault();
-  scrollY = Math.min(Math.max(0, scrollY + e.deltaY), maxScrollFor(contentHeight));
-  textDirty = true;
-  if (ready) scheduleFrame();
-}, { passive: false });
 canvas.addEventListener('mousedown', () => { mouseDown = true; if (ready) scheduleFrame(); });
 canvas.addEventListener('mouseup', () => { mouseDown = false; });
 canvas.addEventListener('mouseleave', () => { mouseDown = false; });
-// A drag and a dragon-chase are the same gesture on a touchscreen, and there
-// is no wheel to fall back on. On a page long enough to scroll the drag has
-// to win outright: letting the dragon follow the finger also spawned fire and
-// reflowed the text around it every frame, so the page churned under the
-// touch instead of moving.
-let touchScrolling = false;
-let touchStartY = 0;
-let touchStartScrollY = 0;
-
 canvas.addEventListener('touchstart', e => {
+  if (!sectionHasDragon()) return;
   e.preventDefault();
   let t = e.touches[0];
-  touchStartY = t.clientY;
-  touchStartScrollY = scrollY;
-  touchScrolling = maxScrollFor(contentHeight) > 0;
-  if (touchScrolling) return;
   mouse.x = t.clientX; mouse.y = t.clientY;
   mouseDown = true;
   if (ready) scheduleFrame();
 }, { passive: false });
 canvas.addEventListener('touchmove', e => {
+  if (!sectionHasDragon()) return;
   e.preventDefault();
   let t = e.touches[0];
-  if (touchScrolling) {
-    scrollY = Math.min(Math.max(0, touchStartScrollY + (touchStartY - t.clientY)), maxScrollFor(contentHeight));
-    textDirty = true;
-  } else {
-    mouse.x = t.clientX; mouse.y = t.clientY;
-  }
+  mouse.x = t.clientX; mouse.y = t.clientY;
   if (ready) scheduleFrame();
 }, { passive: false });
-canvas.addEventListener('touchend', () => { mouseDown = false; touchScrolling = false; });
+canvas.addEventListener('touchend', () => { mouseDown = false; });
 
 // ---- Sections & routing ----
 let currentSection = SECTIONS[0];
+const sectionHasDragon = () => currentSection.id === 'home';
+
+function updateSectionChrome() {
+  const nonHome = !sectionHasDragon();
+  document.body.classList.toggle('non-home', nonHome);
+  canvas.style.touchAction = nonHome ? 'pan-y' : 'none';
+}
 
 function sectionDocTitle(section) {
   return section.id === 'home' ? section.title : `${section.title} · Mihir Sharma`;
@@ -155,6 +140,7 @@ function sectionDocTitle(section) {
 function commitSection(section) {
   currentSection = section;
   document.title = sectionDocTitle(section);
+  updateSectionChrome();
 }
 
 function changeSection(section) {
@@ -162,7 +148,9 @@ function changeSection(section) {
 
   document.title = sectionDocTitle(section);
   currentSection = section;
+  updateSectionChrome();
   rePrepareText(true);
+  window.scrollTo(0, 0);
   scrollY = 0;
   textDirty = true;
 }
@@ -280,8 +268,11 @@ function rePrepareText(force = false) {
 }
 
 // ---- Dragon & footer art ----
+// Both preparations happen while the loading overlay is visible. Rendering
+// does not begin until sprites are decoded, scaled, and the dither artwork is
+// ready, so there is no expensive main-thread work left to stutter after the
+// overlay fades away.
 await Promise.all([loadDragonSprites(), loadFooterArt()]);
-await document.fonts.ready;
 
 let scale = getPageScale();
 let offset = getPageOffset(layout);
@@ -320,6 +311,22 @@ const FADE_REACH_RATIO = 0.2;
 // is how tall the current section's full text is, used to clamp scrollY.
 let scrollY = 0;
 let contentHeight = 0;
+let scrollSpacer = document.querySelector('.scroll-spacer');
+
+function syncNativeScrollHeight() {
+  if (!scrollSpacer) return;
+  if (sectionHasDragon()) {
+    scrollSpacer.style.height = '100vh';
+    return;
+  }
+  scrollSpacer.style.height = `${Math.ceil(window.innerHeight + maxScrollFor(contentHeight))}px`;
+}
+
+window.addEventListener('scroll', () => {
+  if (sectionHasDragon()) return;
+  scrollY = window.scrollY;
+  if (ready) scheduleFrame();
+}, { passive: true });
 
 // Measured from the actual .links footer nav rather than a fixed constant —
 // on mobile it wraps into a 3-line stacked column (see index.html's
@@ -328,6 +335,7 @@ let contentHeight = 0;
 // mobile.
 let linksNavEl = document.querySelector('.links');
 function getLinksBottomReserve() {
+  if (!sectionHasDragon()) return 0;
   if (!linksNavEl) return 20;
   let rect = linksNavEl.getBoundingClientRect();
   return Math.max(20, Math.round(window.innerHeight - rect.top + 12));
@@ -379,6 +387,7 @@ function subtractRanges(ranges, left, right) {
 
 function getAvailableRanges(y, lineH, offsetX, offsetY) {
   let ranges = [{ left: layout.margin, right: layout.pageWidth - layout.margin }];
+  if (!sectionHasDragon()) return ranges;
 
   let top = y + offsetY;
   let bot = y + lineH + offsetY;
@@ -440,7 +449,12 @@ function layoutText(offsetX, offsetY) {
   }
 
   contentHeight = y;
-  scrollY = Math.min(scrollY, maxScrollFor(contentHeight));
+  if (sectionHasDragon()) {
+    scrollY = 0;
+  } else {
+    syncNativeScrollHeight();
+    scrollY = window.scrollY;
+  }
   ctx.restore();
   textDirty = false;
 }
@@ -448,7 +462,7 @@ function layoutText(offsetX, offsetY) {
 // Draw one line with justification and optional fire effect
 function drawLine(targetCtx, line, offsetX, offsetY) {
   const { text, x, y, lineWidth, isLast, isBold } = line;
-  const hasFire = hasActiveFire(dragon);
+  const hasFire = sectionHasDragon() && hasActiveFire(dragon);
   const words = text.trim().split(' ');
   const halfAscent = layout.fontSize * 0.857 / 2;
 
@@ -597,6 +611,7 @@ function drawQuote(targetCtx, availTop, availBottom) {
 
 // ---- Render loop ----
 let frameScheduled = false;
+let initialFramePainted = false;
 
 function render(time) {
   frameScheduled = false;
@@ -606,18 +621,22 @@ function render(time) {
   let restX = offset.x + layout.margin + 80 * sc;
   let restY = offset.y + layout.margin + (-20) * sc;
 
-  let moved = updateDragon(dragon, time, mouse.x, mouse.y, idle, restX, restY);
-  if (mouseDown) spawnFire(dragon);
-  let hasFire = hasActiveFire(dragon);
-  if (hasFire) updateFire(dragon, time);
+  let moved = false;
+  let hasFire = false;
+  if (sectionHasDragon()) {
+    moved = updateDragon(dragon, time, mouse.x, mouse.y, idle, restX, restY);
+    if (mouseDown) spawnFire(dragon);
+    hasFire = hasActiveFire(dragon);
+    if (hasFire) updateFire(dragon, time);
+  }
   if (moved || hasFire) textDirty = true;
 
-  if (hoveredNavLink && time - lastNavFireSpawn > NAV_FIRE_SPAWN_INTERVAL) {
+  if (sectionHasDragon() && hoveredNavLink && time - lastNavFireSpawn > NAV_FIRE_SPAWN_INTERVAL) {
     lastNavFireSpawn = time;
     let rect = hoveredNavLink.getBoundingClientRect();
     spawnRadialFire(navFire, rect.left + rect.width / 2, rect.top + rect.height / 2, sc * 0.55);
   }
-  if (hasActiveFire(navFire)) updateFire(navFire, time);
+  if (sectionHasDragon() && hasActiveFire(navFire)) updateFire(navFire, time);
 
   if (textDirty) layoutText(offset.x, offset.y - scrollY);
 
@@ -641,7 +660,7 @@ function render(time) {
   textClipBottom = offset.y + layout.pageHeight - layout.margin - getLinksBottomReserve();
   let scrollable = maxScrollFor(contentHeight) > 0;
 
-  if (scrollable) {
+  if (scrollable && sectionHasDragon()) {
     // The dragon's idle coil reaches far past its head — fade text out
     // before that point instead of hard-cutting it, so it never has to
     // dodge around the tail as it scrolls through. FADE_REACH_RATIO scales
@@ -696,15 +715,24 @@ function render(time) {
   let drawQuoteNow = () => drawQuote(ctx, textClipTop, textClipBottom);
   if (currentSection.quote && !QUOTE_SETTINGS.overDragon) drawQuoteNow();
 
-  drawFire(ctx, dragon);
-  drawDragon(ctx, dragon);
-  if (hasActiveFire(navFire)) drawFire(ctx, navFire);
+  if (sectionHasDragon()) {
+    drawFire(ctx, dragon);
+    drawDragon(ctx, dragon);
+    if (hasActiveFire(navFire)) drawFire(ctx, navFire);
+  }
 
   if (currentSection.quote && QUOTE_SETTINGS.overDragon) drawQuoteNow();
 
   gl.bindTexture(gl.TEXTURE_2D, tex);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, offscreen);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  if (!initialFramePainted) {
+    initialFramePainted = true;
+    // The draw commands above need one browser frame to become presentable.
+    // Only then may React fade the loading overlay and reveal the canvas.
+    requestAnimationFrame(() => window.dispatchEvent(new Event('manuscript-ready')));
+  }
 
   scheduleFrame();
 }

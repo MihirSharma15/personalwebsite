@@ -1,4 +1,3 @@
-import DitherJS from 'ditherjs';
 import { BG_COLOR } from './config.js';
 
 // A dithered, single-ink illustration used as a quiet full-width footer:
@@ -36,17 +35,33 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-// Reduces to grayscale and brightens with a gamma curve so only genuinely
-// dark structure (treeline, church, rock shadow) survives as ink — most of
-// the photo (sky, snow, sunlit grass) lifts toward the background tone
-// instead of the dither reading as a solid, distracting block of color.
-function brightenGrayscale(imageData, gamma) {
-  let d = imageData.data;
-  for (let i = 0; i < d.length; i += 4) {
-    let luma = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-    let v = 255 * Math.pow(luma / 255, gamma);
-    d[i] = d[i + 1] = d[i + 2] = v;
+// The brighten + Atkinson-dither pass is real per-pixel work (400ms+ for
+// these images) and runs in ditherWorker.js instead of inline here, so it
+// can't freeze the main thread — and with it, every rAF/setTimeout on the
+// page, including the loading-screen timer — for its whole duration.
+let ditherWorker = null;
+let nextRequestId = 1;
+const pendingRequests = new Map();
+
+function getDitherWorker() {
+  if (!ditherWorker) {
+    ditherWorker = new Worker(new URL('./ditherWorker.js', import.meta.url));
+    ditherWorker.onmessage = ({ data }) => {
+      const resolve = pendingRequests.get(data.id);
+      if (!resolve) return;
+      pendingRequests.delete(data.id);
+      resolve(data);
+    };
   }
+  return ditherWorker;
+}
+
+function ditherInWorker(url, width, gamma, step, palette) {
+  return new Promise(resolve => {
+    const id = nextRequestId++;
+    pendingRequests.set(id, resolve);
+    getDitherWorker().postMessage({ id, url, width, gamma, step, palette });
+  });
 }
 
 // Scratch buffer sized to just the footer band. The fade mask is composited
@@ -72,33 +87,19 @@ export function createFooterArt(options) {
   let art = { canvas: null, width: 0, height: 0, ready: false };
 
   function load() {
-    return new Promise(resolve => {
-      let img = new Image();
-      img.onload = () => {
-        let w = RENDER_WIDTH;
-        let h = Math.round(w * (img.naturalHeight / img.naturalWidth));
+    const palette = [hexToRgb(BG_COLOR), hexToRgb(INK_COLOR)];
+    return ditherInWorker(cfg.src, RENDER_WIDTH, BRIGHTEN_GAMMA, DITHER_STEP, palette).then(result => {
+      if (result.error) return art;
 
-        let src = document.createElement('canvas');
-        src.width = w;
-        src.height = h;
-        let sctx = src.getContext('2d');
-        sctx.drawImage(img, 0, 0, w, h);
+      let { width: w, height: h, buffer } = result;
+      let imageData = new ImageData(new Uint8ClampedArray(buffer), w, h);
+      let src = document.createElement('canvas');
+      src.width = w;
+      src.height = h;
+      src.getContext('2d').putImageData(imageData, 0, 0);
 
-        let imageData = sctx.getImageData(0, 0, w, h);
-        brightenGrayscale(imageData, BRIGHTEN_GAMMA);
-        let dither = new DitherJS({
-          algorithm: 'atkinson',
-          step: DITHER_STEP,
-          palette: [hexToRgb(BG_COLOR), hexToRgb(INK_COLOR)]
-        });
-        dither.ditherImageData(imageData);
-        sctx.putImageData(imageData, 0, 0);
-
-        art = { canvas: src, width: w, height: h, ready: true };
-        resolve(art);
-      };
-      img.onerror = () => resolve(art);
-      img.src = cfg.src;
+      art = { canvas: src, width: w, height: h, ready: true };
+      return art;
     });
   }
 
