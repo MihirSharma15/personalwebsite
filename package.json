@@ -5,13 +5,19 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "photos:prepare": "node scripts/prepare-travel-photos.mjs"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.3",
     "ditherjs": "^0.10.0",
+    "gsap": "^3.15.0",
     "next": "^15.5.9",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "exifr": "^7.1.3",
+    "sharp": "^0.35.5"
   }
 }

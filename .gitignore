@@ -6,3 +6,11 @@ dist/
 .DS_Store
 .claude/worktrees/
 .playwright-mcp/
+.cache/
+
+# Source photo imports stay local; the site serves optimized copies in public/travel.
+public/travel-photos/
+
+# Personal documents - never commit
+public/unofficaltranscript.pdf
+*transcript*.pdf

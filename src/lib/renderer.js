@@ -1,6 +1,4 @@
 import { prepareWithSegments, layoutNextLine } from '@chenglou/pretext';
-import { SECTIONS } from './sections.js';
-import { initRouter, navigate } from './router.js';
 import {
   TEXT_COLOR, BG_COLOR, FONT_STACK,
   getResponsiveLayout, getPageOffset, getPageScale
@@ -123,9 +121,12 @@ canvas.addEventListener('touchmove', e => {
 }, { passive: false });
 canvas.addEventListener('touchend', () => { mouseDown = false; });
 
-// ---- Sections & routing ----
-let currentSection = SECTIONS[0];
-const sectionHasDragon = () => currentSection.id === 'home';
+// ---- Sections ----
+// Routing belongs to Next.js: each route's page component declares its own
+// content and hands it over through setSection(). Nothing in here knows which
+// routes exist, so adding a page means adding a file, not editing a table.
+let currentSection = null;
+const sectionHasDragon = () => currentSection?.id === 'home';
 
 function updateSectionChrome() {
   const nonHome = !sectionHasDragon();
@@ -133,20 +134,9 @@ function updateSectionChrome() {
   canvas.style.touchAction = nonHome ? 'pan-y' : 'none';
 }
 
-function sectionDocTitle(section) {
-  return section.id === 'home' ? section.title : `${section.title} · Mihir Sharma`;
-}
-
-function commitSection(section) {
-  currentSection = section;
-  document.title = sectionDocTitle(section);
-  updateSectionChrome();
-}
-
 function changeSection(section) {
   if (section.id === currentSection.id) return;
 
-  document.title = sectionDocTitle(section);
   currentSection = section;
   updateSectionChrome();
   rePrepareText(true);
@@ -155,45 +145,22 @@ function changeSection(section) {
   textDirty = true;
 }
 
+// The render loop can't start before a section exists, so the first call is
+// also what boots it — this module's top-level await means callers only reach
+// here once sprites and artwork are decoded.
 let hasStarted = false;
-function handleSectionChange(section) {
+export function setSection(section) {
   if (!hasStarted) {
     hasStarted = true;
-    commitSection(section);
+    currentSection = section;
+    updateSectionChrome();
+    rePrepareText(true);
+    ready = true;
+    scheduleFrame();
     return;
   }
   changeSection(section);
 }
-initRouter(handleSectionChange);
-
-// ---- Mobile nav drawer ----
-let navToggle = document.querySelector('.nav-toggle');
-let navScrim = document.querySelector('.nav-scrim');
-
-function setNavOpen(open) {
-  document.body.classList.toggle('nav-open', open);
-  navToggle.setAttribute('aria-expanded', String(open));
-  navToggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-}
-
-navToggle.addEventListener('click', () => {
-  setNavOpen(!document.body.classList.contains('nav-open'));
-});
-navScrim.addEventListener('click', () => setNavOpen(false));
-window.addEventListener('keydown', e => {
-  if (e.key === 'Escape') setNavOpen(false);
-});
-
-document.querySelectorAll('.section-nav a[data-route]').forEach(a => {
-  const id = a.dataset.route;
-  a.addEventListener('click', e => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-    e.preventDefault();
-    setNavOpen(false);
-    let section = navigate(id);
-    if (section) changeSection(section);
-  });
-});
 
 // ---- Nav-link hover flames ----
 // Each link sits "in front of" a virtual dragon's mouth: hovering spawns a
@@ -255,8 +222,9 @@ function prepareUnit(u) {
   return prepareWithSegments(u.text, u.isBold ? getBoldFont() : layout.font);
 }
 
-let paragraphUnits = flattenParagraphs(currentSection.paragraphs);
-let preparedParagraphs = paragraphUnits.map(prepareUnit);
+// Filled in by the first setSection(), once a route has declared its content.
+let paragraphUnits = [];
+let preparedParagraphs = [];
 let lastFontSize = layout.fontSize;
 
 function rePrepareText(force = false) {
@@ -612,9 +580,24 @@ function drawQuote(targetCtx, availTop, availBottom) {
 // ---- Render loop ----
 let frameScheduled = false;
 let initialFramePainted = false;
+let rendererActive = true;
+let frameId = null;
+
+export function setRendererActive(active) {
+  rendererActive = active;
+  if (!active) {
+    cancelAnimationFrame(frameId);
+    frameScheduled = false;
+  } else if (ready) {
+    scrollY = window.scrollY;
+    scheduleFrame();
+    if (initialFramePainted) window.dispatchEvent(new Event('manuscript-ready'));
+  }
+}
 
 function render(time) {
   frameScheduled = false;
+  if (!rendererActive) return;
   let offset = getPageOffset(layout);
   let idle = !mouseDown;
   let sc = getPageScale();
@@ -738,11 +721,8 @@ function render(time) {
 }
 
 function scheduleFrame() {
-  if (!frameScheduled) {
+  if (rendererActive && !frameScheduled) {
     frameScheduled = true;
-    requestAnimationFrame(render);
+    frameId = requestAnimationFrame(render);
   }
 }
-
-ready = true;
-scheduleFrame();

@@ -1,6 +1,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { background: #f4eee0; width: 100%; min-height: 100%; overflow-x: hidden; -webkit-user-select: none; user-select: none; }
-canvas { display: block; position: fixed; top: 0; left: 0; touch-action: none; }
+#manuscript { display: block; position: fixed; top: 0; left: 0; touch-action: none; }
+#manuscript[hidden], .scroll-spacer[hidden] { display: none; }
 .scroll-spacer { height: 100vh; pointer-events: none; }
 .loading-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #f4eee0; opacity: 1; transition: opacity 420ms ease; pointer-events: all; }
 .loading-overlay--complete { opacity: 0; pointer-events: none; }
