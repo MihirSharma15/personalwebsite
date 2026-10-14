@@ -16,9 +16,10 @@ html, body { background: #f4eee0; width: 100%; min-height: 100%; overflow-x: hid
 .links { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: min(700px, calc(100vw - 40px)); display: flex; justify-content: space-between; align-items: center; font-family: 'EB Garamond', Garamond, Georgia, serif; font-size: 14px; color: #2a1a0a; z-index: 10; pointer-events: none; padding: 0 45px; }
 .links a { color: #2a1a0a; text-decoration: none; pointer-events: auto; opacity: 0.6; letter-spacing: 0.02em; transition: opacity 0.15s; padding: 4px 12px; border-radius: 999px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 body.non-home .links { display: none; }
-.section-nav { position: fixed; top: 44px; left: 50%; transform: translateX(-50%); width: min(700px, calc(100vw - 40px)); display: flex; justify-content: flex-end; font-family: 'EB Garamond', Garamond, Georgia, serif; z-index: 10; pointer-events: none; padding: 0 45px; }
+.section-nav { position: fixed; top: 34px; right: 36px; width: auto; display: flex; justify-content: flex-end; font-family: 'EB Garamond', Garamond, Georgia, serif; z-index: 10; pointer-events: none; padding: 0; }
 .section-nav .nav-links { display: flex; justify-content: flex-start; align-items: center; gap: 26px; pointer-events: auto; }
 .section-nav a { position: relative; color: #2a1a0a; text-decoration: none; opacity: 0.6; font-size: 14px; letter-spacing: 0.02em; transition: opacity 0.15s, color 0.15s; }
+.section-nav a[aria-current="page"] { opacity: 1; }
 .nav-toggle, .nav-scrim { display: none; }
 @media (hover: hover) { .links a:hover { opacity: 1; text-decoration: underline; text-underline-offset: 3px; } .section-nav a:hover { opacity: 1; color: #c4402a; text-decoration: underline; text-underline-offset: 3px; } }
 @media (max-width: 600px) {
