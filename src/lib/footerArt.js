@@ -12,7 +12,6 @@ const MIN_BAND_HEIGHT = 300;
 const MAX_BAND_HEIGHT = 5000;
 const MAX_BAND_HEIGHT_RATIO = 0.28;
 const TOP_FADE_RATIO = 0.8;
-const TEXT_GAP = 60;
 // A ratio (of band height) rather than a fixed px count, so the bottom fade
 // scales along with the band instead of looking abrupt now that the band
 // can grow much taller (MAX_BAND_HEIGHT is effectively uncapped).
@@ -112,11 +111,10 @@ export function createFooterArt(options) {
     return Math.min(viewportWidth * aspect, maxBandH);
   }
 
-  // Draws the dithered artwork as a bottom-anchored, full-width band behind
-  // the page content. `textBottomY` is the viewport-space Y of the lowest
-  // line of body text (or null if there is none) — the band fades out before
-  // it reaches that line so the art never fights with the text for legibility.
-  function draw(ctx, viewportWidth, viewportHeight, textBottomY) {
+  // Keep the background fade anchored to the viewport. The dragon and fire
+  // reflow the text every frame; following that moving boundary made the
+  // artwork pulse and could collapse the bottom gradient to zero height.
+  function draw(ctx, viewportWidth, viewportHeight) {
     if (!art.ready) return;
 
     let bandH = bandHeight(viewportWidth, viewportHeight);
@@ -140,13 +138,8 @@ export function createFooterArt(options) {
     scratchCtx.drawImage(art.canvas, 0, sy, art.width, visibleSrcH, 0, 0, bw, bh);
     scratchCtx.globalAlpha = 1;
 
-    // Local (scratch-space) fade boundary: natural soft top edge, pushed
-    // further down the band if the text runs long enough to reach it.
+    // Local (scratch-space) fade boundary, independent of moving text.
     let visibleFrom = bh * cfg.topFadeRatio;
-    if (textBottomY != null) {
-      let localTextBoundary = (textBottomY + TEXT_GAP) - bandTop;
-      if (localTextBoundary > visibleFrom) visibleFrom = Math.min(localTextBoundary, bh);
-    }
 
     let grad = scratchCtx.createLinearGradient(0, 0, 0, visibleFrom);
     grad.addColorStop(0, 'rgba(0,0,0,0)');

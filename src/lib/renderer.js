@@ -629,14 +629,9 @@ function render(time) {
   ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
   if (currentSection.id === 'home') {
-    let textBottomY = textLines.length
-      ? offset.y - scrollY + Math.max(...textLines.map(l => l.y)) + layout.lineHeight
-      : null;
-    dolomitesArt.draw(ctx, window.innerWidth, window.innerHeight, textBottomY);
+    dolomitesArt.draw(ctx, window.innerWidth, window.innerHeight);
   } else if (currentSection.quote) {
-    // No text boundary: the quote is vertically centred well above the band,
-    // and letting it push the fade down would swallow the pagoda.
-    gardenArt.draw(ctx, window.innerWidth, window.innerHeight, null);
+    gardenArt.draw(ctx, window.innerWidth, window.innerHeight);
   }
 
   textClipTop = offset.y + layout.margin;
