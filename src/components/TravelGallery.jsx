@@ -31,12 +31,10 @@ export default function TravelGallery({ groups }) {
   const selectedTrigger = useRef(null);
   const activeRef = useRef(0);
   const [active, setActive] = useState(0);
-  const [grid, setGrid] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [selected, setSelected] = useState(null);
   const [atEnd, setAtEnd] = useState(false);
   const photoCount = journey.reduce((sum, group) => sum + group.photos.length, 0);
-  const staticView = grid || reducedMotion;
 
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -47,7 +45,7 @@ export default function TravelGallery({ groups }) {
   }, []);
 
   useEffect(() => {
-    if (staticView || !journey.length) return;
+    if (!journey.length) return;
     gsap.registerPlugin(ScrollTrigger);
     const position = { value: 0 };
     const placements = [];
@@ -94,7 +92,8 @@ export default function TravelGallery({ groups }) {
         const label = countryRefs.current[index];
         if (label) {
           label.style.opacity = String(intro * outro);
-          label.style.transform = `translate(-50%, -50%) translateY(${(1 - intro) * 16 - (1 - outro) * 16}px)`;
+          label.style.transform = reducedMotion ? 'translate(-50%, -50%)'
+            : `translate(-50%, -50%) translateY(${(1 - intro) * 16 - (1 - outro) * 16}px)`;
         }
       });
       placements.forEach(({ element, groupIndex, depth, x, y }) => {
@@ -102,20 +101,25 @@ export default function TravelGallery({ groups }) {
         const z = travel - depth - 250;
         const intro = groupIndex === 0 ? 1 : smooth((travel - group.start + 420) / 500);
         const outro = groupIndex === journey.length - 1 ? 1 : 1 - smooth((travel - group.end + 180) / 380);
-        const opacity = smooth((z + 3000) / 1000) * (1 - smooth((z - 600) / 300)) * intro * outro;
+        // Keep the same scene for reduced motion, with stationary photos
+        // fading through four slots instead of zooming toward the viewer.
+        const fade = reducedMotion
+          ? smooth((z + 1000) / 300) * (1 - smooth((z - 300) / 300))
+          : smooth((z + 3000) / 1000) * (1 - smooth((z - 600) / 300));
+        const opacity = fade * intro * outro;
         const visible = opacity > .005 && z < 910 && z > -3000;
         element.style.visibility = visible ? 'visible' : 'hidden';
         element.style.opacity = String(opacity);
         element.style.pointerEvents = visible && opacity > .55 ? 'auto' : 'none';
         element.tabIndex = visible && opacity > .55 ? 0 : -1;
-        if (visible) element.style.transform = `translate3d(${x}px, ${y}px, ${z}px) translate(-50%, -50%)`;
+        if (visible) element.style.transform = `translate3d(${x}px, ${y}px, ${reducedMotion ? -250 : z}px) translate(-50%, -50%)`;
       });
     }
 
     measure();
     const animation = gsap.fromTo(position, { value: 0 }, { value: total, ease: 'none', onUpdate: paint,
       scrollTrigger: { trigger: rootRef.current, start: 'top top', end: 'bottom bottom',
-        scrub: .18, invalidateOnRefresh: true, onRefresh: measure } });
+        scrub: reducedMotion ? true : .18, invalidateOnRefresh: true, onRefresh: measure } });
     triggerRef.current = animation.scrollTrigger;
     const observer = new ResizeObserver(() => { measure(); ScrollTrigger.refresh(); });
     observer.observe(rootRef.current.querySelector('.travel-stage'));
@@ -125,21 +129,7 @@ export default function TravelGallery({ groups }) {
       animation.kill();
       triggerRef.current = null;
     };
-  }, [journey, total, staticView]);
-
-  useEffect(() => {
-    if (!staticView) return;
-    const observer = new IntersectionObserver(entries => {
-      const entry = entries.find(item => item.isIntersecting);
-      if (entry) {
-        const index = Number(entry.target.dataset.countryIndex);
-        activeRef.current = index;
-        setActive(index);
-      }
-    }, { rootMargin: '-15% 0px -60% 0px' });
-    rootRef.current.querySelectorAll('.travel-grid-country').forEach(section => observer.observe(section));
-    return () => observer.disconnect();
-  }, [staticView]);
+  }, [journey, total, reducedMotion]);
 
   useEffect(() => {
     if (!selected) return;
@@ -160,46 +150,20 @@ export default function TravelGallery({ groups }) {
   }
 
   function goToCountry(index) {
-    if (staticView) {
-      document.getElementById(`country-${journey[index].code}`)?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth' });
-    } else if (triggerRef.current) {
+    if (triggerRef.current) {
       const trigger = triggerRef.current;
       const destination = journey[index].start + (index === 0 ? 0 : 140);
       window.scrollTo({ top: trigger.start + destination / total * (trigger.end - trigger.start), behavior: 'instant' });
     }
   }
 
-  function toggleView() {
-    setGrid(value => !value);
-    window.scrollTo({ top: 0, behavior: 'instant' });
-    activeRef.current = 0;
-    setActive(0);
-    setAtEnd(false);
-  }
-
   if (!journey.length) return <main className="travel-empty"><h1>Travel</h1><p>Photographs from the road, coming soon.</p></main>;
 
   let photoIndex = 0;
   return (
-    <main ref={rootRef} className={`travel-gallery${staticView ? ' travel-gallery--grid' : ''}`}
+    <main ref={rootRef} className="travel-gallery"
       style={{ '--journey-height': `${Math.round(total * .85)}px` }} aria-label="Travel photographs">
       <h1 className="travel-sr-only">Travel photographs</h1>
-      {staticView ? (
-        <div className="travel-grid">
-          {journey.map((group, index) => (
-            <section key={group.code} className="travel-grid-country" id={`country-${group.code}`} data-country-index={index}>
-              <h2>{group.country}</h2>
-              <div className="travel-grid-photos">
-                {group.photos.map(photo => (
-                  <button key={photo.id} className="travel-grid-photo" onClick={event => openPhoto(photo, event)} aria-label={`Open ${photo.alt}`}>
-                    <img src={photo.thumbnail} width={photo.width} height={photo.height} alt={photo.alt} loading="lazy" decoding="async" />
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      ) : (
         <div className="travel-stage">
           <div className="travel-country-titles" aria-hidden="true">
             {journey.map((group, index) => <div key={group.code} ref={element => { countryRefs.current[index] = element; }}
@@ -221,19 +185,15 @@ export default function TravelGallery({ groups }) {
             <button onClick={() => goToCountry(0)}>Wander again <span aria-hidden="true">↗</span></button>
           </div>
         </div>
-      )}
       <footer className="travel-controls">
         <div className="travel-position"><span>{pad(active + 1)}</span><span className="travel-divider">/</span>{pad(journey.length)}</div>
         <nav className="travel-country-nav" aria-label="Jump to country">
           {journey.map((group, index) => <button key={group.code} aria-current={active === index ? 'location' : undefined}
             onClick={() => goToCountry(index)}>{group.country}</button>)}
         </nav>
-        <button className="travel-view-toggle" onClick={toggleView} disabled={reducedMotion} aria-pressed={staticView}>
-          {staticView ? reducedMotion ? 'Gallery view' : 'Tunnel view ↗' : 'View all ↗'}
-        </button>
       </footer>
-      {!staticView && <><p className="travel-scroll-hint">{atEnd ? `${photoCount} photographs, and counting` : 'Scroll to wander'}<span aria-hidden="true">{atEnd ? '·' : '↓'}</span></p>
-        <div className="travel-progress" aria-hidden="true"><div ref={progressRef} /></div></>}
+      <p className="travel-scroll-hint">{atEnd ? `${photoCount} photographs, and counting` : 'Scroll to wander'}<span aria-hidden="true">{atEnd ? '·' : '↓'}</span></p>
+      <div className="travel-progress" aria-hidden="true"><div ref={progressRef} /></div>
       <span className="travel-sr-only" aria-live="polite">{journey[active]?.country}</span>
       {selected && <dialog ref={lightboxRef} className="travel-lightbox" aria-label={`Photograph from ${selected.country}`}
         onCancel={event => { event.preventDefault(); setSelected(null); }}

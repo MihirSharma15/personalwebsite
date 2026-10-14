@@ -25,7 +25,7 @@ body.travel-page { overflow-x: clip; overflow-y: visible; }
 .travel-photo { position: absolute; top: 48%; left: 50%; padding: 0; visibility: hidden; background: #e4decf; backface-visibility: hidden; will-change: transform, opacity; }
 .travel-photo img { width: 100%; height: 100%; display: block; object-fit: contain; box-shadow: 0 3px 18px #2a1a0a0b; }
 .travel-photo::after { content: ''; position: absolute; inset: 0; border: 1px solid #2a1a0a0a; pointer-events: none; }
-.travel-controls { position: fixed; bottom: 27px; left: 36px; right: 36px; display: flex; justify-content: space-between; align-items: center; z-index: 5; gap: 20px; }
+.travel-controls { position: fixed; bottom: 27px; left: 36px; right: 36px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; z-index: 5; gap: 20px; }
 .travel-position { display: flex; gap: 9px; font-size: 14px; font-variant-numeric: tabular-nums; color: #8a8274; min-width: 68px; }
 .travel-position > span:first-child { color: var(--ink); }
 .travel-divider { opacity: .5; }
@@ -33,22 +33,12 @@ body.travel-page { overflow-x: clip; overflow-y: visible; }
 .travel-country-nav button { background: none; font-size: 14px; opacity: .5; padding: 7px 0; position: relative; transition: opacity .2s; }
 .travel-country-nav button:hover, .travel-country-nav button[aria-current] { opacity: 1; }
 .travel-country-nav button[aria-current]::after { content: ''; position: absolute; bottom: 1px; width: 3px; height: 3px; background: #a6533b; border-radius: 50%; left: calc(50% - 1.5px); }
-.travel-view-toggle { background: none; font-size: 14px !important; padding: 7px 0; min-width: 68px; text-align: right; }
-.travel-view-toggle:disabled { opacity: .5; cursor: default; }
 .travel-scroll-hint { position: fixed; bottom: 83px; left: 50%; transform: translateX(-50%); z-index: 5; font-size: 13px; color: #8c8476; pointer-events: none; display: flex; align-items: center; gap: 9px; white-space: nowrap; }
 .travel-progress { position: fixed; bottom: 0; height: 2px; left: 0; right: 0; background: #2a1a0a08; z-index: 6; }
 .travel-progress > div { height: 100%; background: #a6533b66; transform: scaleX(0); transform-origin: left; }
 .travel-ending { position: absolute; left: 50%; top: 64%; transform: translate(-50%, -50%); text-align: center; z-index: 3; opacity: 0; pointer-events: none; transition: opacity .3s; }
 .travel-ending--visible { opacity: 1; pointer-events: auto; }
 .travel-ending button { background: none; font-size: 15px; margin-top: 14px; padding-bottom: 3px; border-bottom: 1px solid #2a1a0a40; }
-.travel-gallery--grid { min-height: 100svh; }
-.travel-grid { max-width: 1200px; margin: auto; padding: 150px 50px 140px; }
-.travel-grid-country { margin-bottom: 100px; scroll-margin-top: 120px; }
-.travel-grid-country h2 { font-family: Arial, Helvetica, sans-serif; font-size: clamp(40px, 8vw, 100px); font-weight: 900; letter-spacing: -.055em; text-transform: uppercase; color: #88847966; margin-bottom: 35px; }
-.travel-grid-photos { columns: 3; column-gap: 24px; }
-.travel-grid-photo { width: 100%; display: block; break-inside: avoid; margin-bottom: 24px; padding: 0; background: none; }
-.travel-grid-photo img { display: block; width: 100%; height: auto; }
-.travel-gallery--grid .travel-controls { background: #f4eee0ed; padding: 14px 20px; bottom: 12px; border-radius: 3px; }
 .travel-lightbox { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; border: 0; background: #f4eee0f5; padding: 70px 5vw 45px; color: var(--ink); text-align: center; }
 .travel-lightbox[open] { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; }
 .travel-lightbox::backdrop { background: #f4eee0; }
@@ -65,20 +55,13 @@ body.travel-page { overflow-x: clip; overflow-y: visible; }
 }
 @media (max-width: 600px) {
   .travel-country-title { letter-spacing: -.07em; }
-  .travel-controls { bottom: max(19px, env(safe-area-inset-bottom)); flex-wrap: wrap; gap: 12px; }
-  .travel-position, .travel-view-toggle { font-size: 12px !important; }
-  .travel-country-nav { order: -1; flex-basis: 100%; justify-content: space-between; gap: 6px; }
+  .travel-controls { bottom: max(19px, env(safe-area-inset-bottom)); grid-template-columns: 1fr; gap: 12px; }
+  .travel-position { font-size: 12px; }
+  .travel-country-nav { order: -1; justify-content: space-between; gap: 6px; }
   .travel-country-nav button { font-size: 12px; padding: 6px 0; }
   .travel-scroll-hint { bottom: 112px; font-size: 12px; }
-  .travel-grid { padding: 125px 22px 120px; }
-  .travel-grid-country { margin-bottom: 65px; }
-  .travel-grid-photos { columns: 2; column-gap: 12px; }
-  .travel-grid-photo { margin-bottom: 12px; }
-  .travel-gallery--grid .travel-controls { padding: 10px; left: 12px; right: 12px; }
   .travel-ending { top: 63%; width: 90%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .travel-gallery { min-height: 100svh; }
-  .travel-stage, .travel-scroll-hint, .travel-progress { display: none; }
   .travel-gallery * { scroll-behavior: auto !important; transition: none !important; }
 }
